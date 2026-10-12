@@ -8,7 +8,7 @@
 <div class="layout"><aside><b>年代・カテゴリーから探す</b><div class="cats" id="cats"></div></aside><main>
 <h2 id="heading">所持品一覧</h2><div class="tabs"><button class="active" data-tab="owned">所持品一覧</button><button data-tab="wanted">求め品一覧</button></div>
 <input class="search" id="search" placeholder="アイテム名・色で検索">
-<p class="notice">画像は提供されたスクリーンショットから切り抜いたものだけを使用しています。画像未確認のアイテムは今後追加予定。交換可否は確認中のため、掲載品すべてが交換可能とは限りません。</p>
+
 <p id="count"></p><div class="grid" id="grid"></div></main></div>
 <dialog class="video-dialog" id="videoDialog"><div class="top"><strong id="videoTitle"></strong><button id="closeVideo" aria-label="閉じる">×</button></div><video id="itemVideo" controls playsinline loop preload="none"></video></dialog>
 <script>
@@ -61,6 +61,8 @@ if(/インナー|肌着|タンクトップ/.test(n))return 0;
 return 5;};
 // 同じ発売月のシリーズ品は、衣装の分類をまたいでも隣り合うようにする。
 const seriesOf=x=>{const n=x.name||"";if(/バイク整備士|後ろの相棒バイク|編み上げバイクブーツ|風邪を感じる後ろの相棒バイク/.test(n))return "バイク整備士";if(/妖の紅葉狩り/.test(n))return "妖の紅葉狩り";return ""};
+// 目玉と確認できたアイテムだけを同じ弾・分類内で優先する。
+const isConfirmedEye=x=>x.isEye===true||x.eyecatch===true||/目玉/.test(x.name||"");
 const compareBase=(a,b)=>{const d=categoryOrder(a)-categoryOrder(b);if(d)return d;
 if(a.cat==="プレミアムガチャ"&&b.cat==="プレミアムガチャ"){
 const premiumOrder=n=>/ねこみみ/.test(n)?0:/いぬの首輪/.test(n)?1:/鈴付スカーフ/.test(n)?2:/鼓笛隊のチェロケース/.test(n)?3:99;
@@ -75,7 +77,7 @@ if(isFree(a)&&isFree(b)){
 const dateKey=x=>{const m=(x.release||"").match(/(\d{4})年\s*(\d{1,2})月/);return m?Number(m[1])*100+Number(m[2]):999999};
 return dateKey(a)-dateKey(b)||compareBase(a,b);
 }
-if(isGacha(a)&&isGacha(b))return (a.cat==="シーズンガチャ"&&b.cat==="シーズンガチャ"?(a.series||"").localeCompare(b.series||"","ja"):0)||(a.round||9999)-(b.round||9999)||gachaGroup(a)-gachaGroup(b)||compareBase(a,b);
+if(isGacha(a)&&isGacha(b))return (a.cat==="シーズンガチャ"&&b.cat==="シーズンガチャ"?(a.series||"").localeCompare(b.series||"","ja"):0)||(a.round||9999)-(b.round||9999)||gachaGroup(a)-gachaGroup(b)||Number(isConfirmedEye(b))-Number(isConfirmedEye(a))||compareBase(a,b);
 const group=groupKey(a).localeCompare(groupKey(b));if(group)return group;
 return compareBase(a,b)});
 document.getElementById("count").textContent="発売年月別／無料アイテム・リサイクル品・ガチャ品は別枠 ・ 掲載 "+list.length+" 件";
