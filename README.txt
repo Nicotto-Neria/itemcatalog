@@ -1,4 +1,2 @@
-ニコタカタログ公開用
-GitHub Pages: このフォルダ内の index.html と assets フォルダを同じ階層にアップロードしてください。
-Settings > Pages > Deploy from a branch > main / root で公開できます。
-動画はアイテムをクリックしたときだけ再生されます。
+ニコッとタウン 所持品カタログ（351点）
+index.html と assets フォルダを一緒に GitHub Pages にアップロードしてください。
