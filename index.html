@@ -3,6 +3,7 @@
 :root{font-family:"Noto Sans JP","Yu Gothic",sans-serif;color:#303030;background:#fafafa}*{box-sizing:border-box}body{margin:0}header{background:white;border-bottom:1px solid #ddd;padding:24px max(18px,calc((100vw - 1150px)/2))}h1{font-size:26px;letter-spacing:.08em;margin:0}header p{font-size:12px;color:#888;margin:7px 0 0}.layout{max-width:1150px;margin:auto;display:grid;grid-template-columns:190px 1fr;gap:26px;padding:25px 15px}aside{border-right:1px solid #ddd;padding-right:15px}button{cursor:pointer;background:white;border:1px solid #ddd;padding:10px;border-radius:5px;color:#333}button.active{background:#333;color:white}aside button{width:100%;text-align:left;margin:3px 0}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 22px}.search{width:100%;padding:13px;border:1px solid #ccc;border-radius:5px;font:inherit}h2{font-size:20px;border-left:4px solid #333;padding-left:12px}.hint{color:#777;font-size:13px;line-height:1.7}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:15px}.item{background:white;border:1px solid #e0e0e0;border-radius:5px;overflow:hidden}.item img{display:block;width:100%;height:190px;object-fit:contain;background:#fff}.body{padding:10px}.name{font-size:12px;min-height:42px;line-height:1.6}.meta{font-size:11px;color:#777;margin-top:6px}.pill{display:inline-block;background:#f1f1f1;padding:3px 7px;border-radius:12px}.notice{background:#f1f1f1;padding:12px;margin:15px 0;border-radius:5px;font-size:13px}#count{color:#888;font-size:13px}@media(max-width:650px){.layout{display:block;padding:14px}aside{border:0;padding:0}aside .cats{display:flex;overflow-x:auto;gap:5px}aside button{white-space:nowrap;width:auto}.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.item img{height:175px}header{padding:20px 15px}}
 .item.has-video{cursor:pointer}.item.has-video:hover{outline:2px solid #b0a5c7;outline-offset:2px}.video-mark{display:inline-block;font-size:11px;background:#f0eaf7;color:#65547d;border-radius:5px;padding:2px 7px;margin-top:5px}
 .video-dialog{border:0;border-radius:12px;padding:18px;width:min(430px,92vw);box-shadow:0 16px 65px #0004}.video-dialog::backdrop{background:#0009}.video-dialog video{width:100%;max-height:65vh;object-fit:contain;background:#f5f3f8;border-radius:8px}.video-dialog .top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}.video-dialog .top button{font-size:22px;border:0;background:none;cursor:pointer}
+.pagination{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;padding:18px 4px;margin:8px 0 14px;border-top:1px solid #eee;border-bottom:1px solid #eee}.pagination button{border:1px solid #ddd;background:#fff;color:#222;border-radius:7px;padding:8px 12px;cursor:pointer;font:inherit}.pagination button.page-active{background:#202020;color:white;border-color:#202020}.pagination button:disabled{opacity:.35;cursor:not-allowed}.pagination span{font-size:12px;color:#777;margin-left:8px}
 </style>
 <header><h1>ニコタ アイテムリスト</h1><p>ITEM COLLECTION · 所持品 / 求め品</p></header>
 <div class="layout"><aside><b>年代・カテゴリーから探す</b><div class="cats" id="cats"></div></aside><main>
@@ -23,15 +24,28 @@ function openVideo(x){document.getElementById("videoTitle").textContent=x.name;i
 const gachaTypes=["プレミアムガチャ","ニコガチャ","無料ガチャ","白ガチャ","黒ガチャ","色ガチャ","シーズンガチャ","青ガチャ"];
 const sectionOrder=["リサイクル",...gachaTypes,"無料アイテム"];
 const isFree=x=>x.cat==="無料アイテム";
+const releaseMonth=x=>{const m=(x.release||"").match(/(\d{4})年\s*(\d{1,2})月/);return m?m[1]+"年"+String(Number(m[2])).padStart(2,"0")+"月":""};
+const displayMonthOf=x=>/^\d{4}年$/.test(selectedMonth)&&isFree(x)&&releaseMonth(x)?releaseMonth(x):monthOf(x);
 const isGacha=x=>gachaTypes.includes(x.cat);
 const monthOf=x=>{if(isGacha(x))return x.cat;if(isFree(x))return "無料アイテム";if(/リサイクル/.test((x.cat||"")+" "+(x.note||"")))return "リサイクル";const m=(x.release||"").match(/(\d{4})年\s*(\d{1,2})月/);return m?m[1]+"年"+String(Number(m[2])).padStart(2,"0")+"月":"発売年月未確認"};
 const monthSort=x=>{const i=sectionOrder.indexOf(x);if(i>=0)return 1000000+i;return x==="発売年月未確認"?999999:Number(x.match(/\d+/)[0])*100+Number(x.match(/年(\d+)/)[1])};
-const months=[...new Set(items.map(monthOf))].sort((a,b)=>monthSort(a)-monthSort(b));
-const navSections=[...new Set(months.map(x=>/^\d{4}年\d{2}月$/.test(x)?x.slice(0,4)+"年":x))];
+const months=[...new Set(items.map(monthOf))].sort((a,b)=>{const rank=x=>/^\d{4}年$/.test(x)?Number(x.slice(0,4))*100:monthSort(x);return rank(a)-rank(b)});
+const navSections=[...new Set([...months,...items.filter(isFree).map(releaseMonth).filter(Boolean)].map(x=>/^\d{4}年\d{2}月$/.test(x)?x.slice(0,4)+"年":x))].sort((a,b)=>{const rank=x=>/^\d{4}年$/.test(x)?Number(x.slice(0,4))*100:monthSort(x);return rank(a)-rank(b)});
 const nav=document.getElementById("cats");
-function drawNav(){nav.replaceChildren();for(const x of ["すべて",...navSections]){let b=document.createElement("button");b.textContent=x;b.classList.toggle("active",x===selectedMonth);b.onclick=()=>{selectedMonth=x;render()};nav.append(b)}}
-document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{tab=b.dataset.tab;document.querySelectorAll("[data-tab]").forEach(x=>x.classList.toggle("active",x===b));render()});
-document.getElementById("search").oninput=render;
+function drawNav(){nav.replaceChildren();for(const x of ["すべて",...navSections]){let b=document.createElement("button");b.textContent=x;b.classList.toggle("active",x===selectedMonth);b.onclick=()=>{selectedMonth=x;currentPage=1;render()};nav.append(b)}}
+document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{tab=b.dataset.tab;currentPage=1;document.querySelectorAll("[data-tab]").forEach(x=>x.classList.toggle("active",x===b));render()});
+document.getElementById("search").oninput=()=>{currentPage=1;render()};
+let currentPage=1;
+const pageLimit=24;
+function paginationBar(total, pages){
+ const bar=document.createElement("nav");bar.className="pagination";bar.setAttribute("aria-label","ページ切り替え");
+ const btn=(label,target,disabled=false,active=false)=>{const b=document.createElement("button");b.textContent=label;b.disabled=disabled;b.className=active?"page-active":"";b.onclick=()=>{currentPage=target;render();document.getElementById("heading").scrollIntoView({behavior:"smooth",block:"start"})};bar.append(b)};
+ btn("‹ 前へ",currentPage-1,currentPage===1);
+ const start=Math.max(1,Math.min(currentPage-2,pages-4)),end=Math.min(pages,start+4);
+ for(let i=start;i<=end;i++)btn(String(i),i,false,i===currentPage);
+ btn("次へ ›",currentPage+1,currentPage===pages);
+ const note=document.createElement("span");note.textContent=`${currentPage} / ${pages} ページ`;bar.append(note);return bar;
+}
 function render(){
 drawNav();document.getElementById("heading").textContent=tab==="owned"?"所持品一覧（発売年月別）":"求め品一覧";
 const grid=document.getElementById("grid");grid.replaceChildren();
@@ -49,7 +63,7 @@ const meta=document.createElement("div");meta.className="meta";meta.textContent=
 }return}
 const q=document.getElementById("search").value.toLowerCase();
 const insertionOrder=new Map(items.map((x,i)=>[x,i]));
-const list=items.filter(x=>(selectedMonth==="すべて"||( /^\d{4}年$/.test(selectedMonth) ? monthOf(x).startsWith(selectedMonth) : monthOf(x)===selectedMonth))&&(x.name+(x.color||"")+(x.release||"")).toLowerCase().includes(q));
+const list=items.filter(x=>(selectedMonth==="すべて"||( /^\d{4}年$/.test(selectedMonth) ? displayMonthOf(x).startsWith(selectedMonth) : monthOf(x)===selectedMonth))&&(x.name+(x.color||"")+(x.release||"")).toLowerCase().includes(q));
 const categoryOrder=x=>{const c=x.cat||"";const n=x.name||"";const typeOrder={"インナー":0,"アウター":1,"上着":1,"ズボン":2,"ボトムス":2,"全身服":3,"アクセ頭":4,"帽子系":4,"アクセ":5,"手持ち":5,"髪型":6,"フェイスペイント":7,"靴下":8,"靴":9,"背景":10};if(Object.prototype.hasOwnProperty.call(typeOrder,x.subtype))return typeOrder[x.subtype];if(x.subtype==="アクセ頭")return 4;if(x.subtype==="アクセ")return 5;if(x.subtype==="アクセ頭")return 4;if(x.subtype==="アクセ")return 5;
 if(x.cat==="プレミアムガチャ"){
 if(/ワイルドパンツ|もふもふショートパンツ/.test(n))return 2;
@@ -85,7 +99,8 @@ const p=premiumOrder(a.name)-premiumOrder(b.name);if(p)return p;
 // 発売月ごとにシリーズをひとかたまりにし、その中では指定の衣装順で表示。
 // 全身服 → 帽子・頭 → その他アクセ → 手持ち → 靴下 → 靴 の順。
 const groupKey=x=>{const series=seriesOf(x);if(series==="バイク整備士")return "03-0";if(series==="妖の紅葉狩り")return "03-1";return String(categoryOrder(x)).padStart(2,"0")+"-9"};
-list.sort((a,b)=>{const date=monthSort(monthOf(a))-monthSort(monthOf(b));if(date)return date;
+list.sort((a,b)=>{const date=monthSort(displayMonthOf(a))-monthSort(displayMonthOf(b));if(date)return date;
+if(/^\d{4}年$/.test(selectedMonth)&&isFree(a)!==isFree(b))return isFree(a)?1:-1;
 if(monthOf(a)==="リサイクル"&&monthOf(b)==="リサイクル")return gachaGroup(a)-gachaGroup(b)||a.name.localeCompare(b.name,"ja");
 if(isFree(a)&&isFree(b)){
 const dateKey=x=>{const m=(x.release||"").match(/(\d{4})年\s*(\d{1,2})月/);return m?Number(m[1])*100+Number(m[2]):999999};
@@ -94,17 +109,30 @@ return dateKey(a)-dateKey(b)||compareBase(a,b);
 if(isGacha(a)&&isGacha(b))return (a.cat==="シーズンガチャ"&&b.cat==="シーズンガチャ"?(a.series||"").localeCompare(b.series||"","ja"):0)||(Number(roundNumber(a.round))||9999)-(Number(roundNumber(b.round))||9999)||gachaGroup(a)-gachaGroup(b)||Number(isConfirmedEye(b))-Number(isConfirmedEye(a))||(insertionOrder.get(a)-insertionOrder.get(b));
 const group=groupKey(a).localeCompare(groupKey(b));if(group)return group;
 return compareBase(a,b)});
-document.getElementById("count").textContent="発売年月別／無料アイテム・リサイクル品・ガチャ品は別枠 ・ 掲載 "+list.length+" 件";
+// ページ境界は発売月・ガチャ弾数・無料アイテムの発売年月を優先し、同じグループを分割しない。
+const pageGroup=x=>{const m=displayMonthOf(x);if(["白ガチャ","黒ガチャ","色ガチャ","青ガチャ"].includes(x.cat))return m+":"+(x.round||"未確認");if(x.cat==="シーズンガチャ")return m+":"+(x.series||"");if(["プレミアムガチャ","ニコガチャ","無料ガチャ"].includes(x.cat))return m+":分類"+gachaGroup(x);if(isFree(x))return m+":"+(x.release||"未確認");return m};
+const pages=[];let part=[];
+for(const x of list){if(part.length>=pageLimit&&pageGroup(part[part.length-1])!==pageGroup(x)){pages.push(part);part=[]}part.push(x)}
+if(part.length)pages.push(part);
+currentPage=Math.max(1,Math.min(currentPage,Math.max(1,pages.length)));
+const visible=pages[currentPage-1]||[];
+document.getElementById("count").textContent=(/^\d{4}年$/.test(selectedMonth)?"同じ年月の課金・無料アイテムを表示（無料アイテム欄にも掲載）":"発売年月別／無料アイテム・リサイクル品・ガチャ品は別枠")+" ・ 掲載 "+list.length+" 件 ・ "+Math.max(1,pages.length)+" ページ";
+if(pages.length>1)grid.append(paginationBar(list.length,pages.length));
 let lastMonth="",lastSection="",lastFreeDate="",lastGachaGroup=null,lastGachaRound=null;
-for(const x of list){const month=monthOf(x);if(month!==lastMonth){const h=document.createElement("h3");h.textContent=month;h.style.cssText="grid-column:1/-1;border-bottom:1px solid #ddd;padding:16px 0 8px;margin:10px 0 0";grid.append(h);lastMonth=month;lastSection="";lastGachaGroup=null;lastGachaRound=null;}
+for(const x of visible){const month=displayMonthOf(x);if(month!==lastMonth){const h=document.createElement("h3");h.textContent=month;h.style.cssText="grid-column:1/-1;border-bottom:1px solid #ddd;padding:16px 0 8px;margin:10px 0 0";grid.append(h);lastMonth=month;lastSection="";lastGachaGroup=null;lastGachaRound=null;}
+// 年代別では同月内に課金品→無料品の区切りを設ける。
+if(/^\d{4}年$/.test(selectedMonth)&&!isGacha(x)){
+ const section=isFree(x)?"無料アイテム":"課金アイテム";
+ if(section!==lastSection){const h=document.createElement("h4");h.textContent=section;h.className="year-free-section";h.style.cssText="grid-column:1/-1;margin:10px 0 0;padding:9px 0 6px;border-bottom:1px solid #e7e7e7;font-size:14px;letter-spacing:.06em";grid.append(h);lastSection=section;}
+}
 // 無料アイテムも発売年月で小分けにする（年月不明は最後）。
-if(isFree(x)){
+if(isFree(x)&&!/^\d{4}年$/.test(selectedMonth)){
 const m=(x.release||"").match(/(\d{4})年\s*(\d{1,2})月/);
 const date=m?m[1]+"年"+Number(m[2])+"月":"発売年月未確認";
 if(date!==lastFreeDate){const sub=document.createElement("h4");sub.textContent=date;sub.style.cssText="grid-column:1/-1;margin:10px 0 0;padding:8px 0 5px;border-bottom:1px solid #e7e7e7";grid.append(sub);lastFreeDate=date;}
 }
 // 同じ月でもシリーズが変わるところで改行し、見出しを挿入する。
-if(!isGacha(x)&&!isFree(x)&&month!=="リサイクル"&&month!=="発売年月未確認"){
+if(!/^\d{4}年$/.test(selectedMonth)&&!isGacha(x)&&!isFree(x)&&month!=="リサイクル"&&month!=="発売年月未確認"){
 const section=seriesOf(x)||"その他のアイテム";
 if(section!==lastSection){
 const sub=document.createElement("div");sub.setAttribute("aria-hidden","true");
@@ -112,8 +140,8 @@ sub.style.cssText="grid-column:1/-1;height:0;margin:12px 0 0;padding:0;border:0"
 grid.append(sub);lastSection=section;
 }
 }
-if(x.cat==="シーズンガチャ"&&x.series){const prev=list[list.indexOf(x)-1];if(!prev||prev.cat!==x.cat||prev.series!==x.series){const sub=document.createElement("h4");sub.textContent=x.series;sub.style.cssText="grid-column:1/-1;margin:8px 0 0;padding:7px 0;color:#777;border-bottom:1px dashed #ddd";grid.append(sub)}}
-if(isGacha(x)&&["白ガチャ","黒ガチャ","色ガチャ","青ガチャ"].includes(x.cat)){const prev=list[list.indexOf(x)-1];if(!prev||monthOf(prev)!==month||prev.round!==x.round){const sub=document.createElement("h4");sub.textContent=x.round?"第"+roundNumber(x.round)+"弾":"弾数未確認";sub.style.cssText="grid-column:1/-1;margin:8px 0 0;padding:7px 0;color:#777;border-bottom:1px dashed #ddd";grid.append(sub)}}
+if(x.cat==="シーズンガチャ"&&x.series){const prev=visible[visible.indexOf(x)-1];if(!prev||prev.cat!==x.cat||prev.series!==x.series){const sub=document.createElement("h4");sub.textContent=x.series;sub.style.cssText="grid-column:1/-1;margin:8px 0 0;padding:7px 0;color:#777;border-bottom:1px dashed #ddd";grid.append(sub)}}
+if(isGacha(x)&&["白ガチャ","黒ガチャ","色ガチャ","青ガチャ"].includes(x.cat)){const prev=visible[visible.indexOf(x)-1];if(!prev||monthOf(prev)!==month||prev.round!==x.round){const sub=document.createElement("h4");sub.textContent=x.round?"第"+roundNumber(x.round)+"弾":"弾数未確認";sub.style.cssText="grid-column:1/-1;margin:8px 0 0;padding:7px 0;color:#777;border-bottom:1px dashed #ddd";grid.append(sub)}}
 if(isGacha(x)){
 const group=gachaGroup(x),round=["白ガチャ","黒ガチャ","色ガチャ","青ガチャ"].includes(x.cat)?x.round:null;
 if(lastGachaGroup!==null&&group!==lastGachaGroup&&round===lastGachaRound){
@@ -122,5 +150,6 @@ const br=document.createElement("div");br.setAttribute("aria-hidden","true");br.
 lastGachaGroup=group;lastGachaRound=round;
 }
 const card=document.createElement("article");card.className="item";const img=document.createElement("img");if(x.img)img.src=x.img;img.alt=x.name;const body=document.createElement("div");body.className="body";const name=document.createElement("div");name.className="name";name.textContent=x.name;const meta=document.createElement("div");meta.className="meta";meta.textContent=(x.color?x.color+" ・ ":"")+(isGacha(x)?x.cat+(["白ガチャ","黒ガチャ","色ガチャ","青ガチャ"].includes(x.cat)?(x.round?" 第"+roundNumber(x.round)+"弾":" ・ 弾数未確認"):""):month==="リサイクル"?"リサイクル品":isFree(x)?"無料アイテム":(x.release||"発売年月未確認"));body.append(name,meta);if(x.description){const desc=document.createElement("div");desc.className="meta";desc.textContent=x.description;body.append(desc)}if(x.video){card.classList.add("has-video");const mark=document.createElement("span");mark.className="video-mark";mark.textContent="▶ 動くアイテム・クリックで再生";body.append(mark);card.tabIndex=0;card.setAttribute("role","button");card.setAttribute("aria-label",x.name+"の動画を再生");card.onclick=()=>openVideo(x);card.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openVideo(x)}}}card.append(img,body);grid.append(card)}
+if(pages.length>1)grid.append(paginationBar(list.length,pages.length));
 }render();
 </script></html>
